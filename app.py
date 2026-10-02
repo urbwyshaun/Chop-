@@ -26,20 +26,30 @@ def home():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), "index.html")
 
 
+@app.get("/api/ping")
+def ping():
+    return jsonify(ok=True)       # only checks that your access key is right
+
+
 @app.get("/api/news")
 def news():
-    if time.time() - NEWS["t"] > 1800:          # refresh at most every 30 minutes
+    # The free feed allows only a couple of downloads per 5 minutes per IP, so cache for an hour
+    # and wait 5 minutes between retries after a failure.
+    now = time.time()
+    if now - NEWS["t"] > 3600 and now - NEWS.get("fail", 0) > 300:
         try:
             r = requests.get(NEWS_URL, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
             r.raise_for_status()
+            raw = r.json()          # raises if the feed sent a "Request Denied" web page instead
             NEWS["items"] = [
                 {"title": e.get("title", ""), "country": e.get("country", ""), "date": e.get("date", ""),
                  "impact": e.get("impact"), "forecast": e.get("forecast", ""), "previous": e.get("previous", "")}
-                for e in r.json() if e.get("impact") in ("High", "Medium")]
-            NEWS["t"] = time.time()
-        except Exception as ex:
-            if not NEWS["items"]:
-                return jsonify(error="News feed unavailable: " + str(ex)[:80]), 502
+                for e in raw if e.get("impact") in ("High", "Medium")]
+            NEWS["t"] = now
+        except Exception:
+            NEWS["fail"] = now
+    if not NEWS["items"]:
+        return jsonify(error="The free news feed is limiting requests right now"), 502
     return jsonify(items=NEWS["items"])
 
 
