@@ -1,11 +1,12 @@
-import base64, hmac, json, os, time
+import base64, hmac, json, os, re, time
 
 import requests
 from flask import Flask, jsonify, request, send_from_directory
 
 KEY = os.environ.get("API_KEY", "")                  # your private access key
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")    # free key from Google AI Studio
-MODELS = [m for m in (os.environ.get("GEMINI_MODEL"), "gemini-2.5-flash", "gemini-2.5-flash-lite") if m]
+SKIP = ("image", "tts", "audio", "live", "embed", "robotics", "computer", "native", "learnlm")
+MODEL_CACHE = {"t": 0, "names": []}
 NEWS_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 
 app = Flask(__name__)
@@ -63,6 +64,31 @@ Read prices only from the chart's price axis and last-price label. A buy needs s
 If the image is unclear or there is no good setup, use direction "none" and explain why in reason."""
 
 
+def candidate_models():
+    """Ask Google which Gemini 'flash' models this key can use, newest first, so we never hard-code a retired name."""
+    out = [m for m in (os.environ.get("GEMINI_MODEL"),) if m]
+    now = time.time()
+    if now - MODEL_CACHE["t"] > 21600:
+        try:
+            r = requests.get("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200",
+                             headers={"x-goog-api-key": GEMINI_KEY}, timeout=15)
+            names = []
+            for m in r.json().get("models", []):
+                n = m["name"].split("/")[-1]
+                if "generateContent" in m.get("supportedGenerationMethods", []) and "flash" in n \
+                        and not any(x in n for x in SKIP):
+                    names.append(n)
+
+            def rank(n):
+                v = re.search(r"gemini-(\d+(?:\.\d+)?)", n)
+                return (-(float(v.group(1)) if v else 0), "lite" in n, "preview" in n or "exp" in n, n)
+            MODEL_CACHE.update(t=now, names=sorted(names, key=rank))
+        except Exception:
+            pass
+    out += [n for n in MODEL_CACHE["names"] if n not in out]
+    return (out or ["gemini-2.5-flash"])[:5]
+
+
 @app.post("/api/analyze")
 def analyze():
     if not GEMINI_KEY:
@@ -76,14 +102,14 @@ def analyze():
             {"text": PROMPT.format(note=request.form.get("note", "")[:100])},
             {"inline_data": {"mime_type": "image/jpeg", "data": data}}]}],
         "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2}}
-    err = "no model tried"
-    for model in MODELS:                         # fall back to the next model on errors
+    tried = []
+    for model in candidate_models():             # fall back to the next model on errors
         try:
             r = requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                 headers={"x-goog-api-key": GEMINI_KEY}, json=body, timeout=60)
-        except requests.RequestException as ex:
-            err = str(ex)[:120]
+        except requests.RequestException:
+            tried.append(f"{model}: network error")
             continue
         if r.status_code == 200:
             try:
@@ -92,7 +118,11 @@ def analyze():
                     out = out[0]
                 return jsonify(out)
             except Exception:
-                err = "Could not read the AI reply"
+                tried.append(f"{model}: unreadable reply")
                 continue
-        err = f"Gemini {model} error {r.status_code}: {r.text[:140]}"
-    return jsonify(error=err), 502
+        try:
+            msg = r.json()["error"]["message"][:90]
+        except Exception:
+            msg = r.text[:90]
+        tried.append(f"{model}: {r.status_code} {msg}")
+    return jsonify(error="Scan failed. " + " | ".join(tried[:3])), 502
