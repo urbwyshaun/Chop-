@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scalper Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#E9EEF2;--sf:#fff;--ink:#101820;--mu:#5B6773;--ln:#CBD5DD;--ac:#E8174B;--ok:#0E8F5B;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B0F14;--sf:#151B23;--ink:#EEF2F6;--mu:#9AA7B4;--ln:#28323D;--ac:#FF4D79;--ok:#3DD598}}
+:root[data-theme="dark"]{--bg:#0B0F14;--sf:#151B23;--ink:#EEF2F6;--mu:#9AA7B4;--ln:#28323D;--ac:#FF4D79;--ok:#3DD598}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 Sora,system-ui,sans-serif}
+main{max-width:440px;margin:0 auto;padding:22px 20px 110px}
+h1{font-size:26px;line-height:1.15;margin:0;font-weight:700}
+h2{font-size:15px;margin:28px 0 10px;font-weight:600;color:var(--mu)}
+.st{color:var(--mu);font-size:14px;margin-top:4px}.st.on{color:var(--ok);font-weight:600}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.btn{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:13px 16px;font-weight:600}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+.dial{display:block;position:relative;width:224px;height:224px;margin:26px auto 22px;border-radius:50%;background:var(--sf);border:1px solid var(--ln)}
+.dial svg{position:absolute;inset:0;width:100%;height:100%}
+.t{stroke:var(--ln);stroke-width:7;stroke-linecap:round}.t.on{stroke:var(--ac)}
+.dial .tx{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.dial b{font-size:21px}.dial span{font-size:13px;color:var(--mu)}
+.dial.run{background:var(--ac);border-color:var(--ac);color:#fff}.dial.run span{color:#fff;opacity:.85}
+.dial.run .t{stroke:rgba(255,255,255,.35)}.dial.run .t.on{stroke:#fff}
+.dial:disabled{opacity:.5;cursor:default}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bot{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;margin-bottom:10px}
+.bot span{font-weight:400;font-size:13px;color:var(--mu)}
+.bot.sel{border-color:var(--ac);box-shadow:inset 3px 0 0 var(--ac)}
+.add{display:flex;gap:10px}
+input[type=text]{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:12px 14px}
+.panel{display:none}.panel.show{display:block}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--sf);border-top:1px solid var(--ln);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;background:none;border:0;padding:12px 4px;font-weight:600;color:var(--mu)}
+nav button[aria-selected=true]{color:var(--ac)}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:16px}
+.chart{width:100%;height:auto;display:block}
+code{display:block;overflow-x:auto;white-space:nowrap;padding:10px 12px;border:1px solid var(--ln);border-radius:10px;margin:8px 0 12px;font-size:13px}
+ol{padding-left:20px;margin:0 0 16px}li{margin-bottom:8px}
+dialog{width:min(400px,92vw);border:1px solid var(--ln);border-radius:18px;background:var(--sf);color:var(--ink);padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.pl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 16px}
+.pl label{display:flex;gap:8px;align-items:center;border:1px solid var(--ln);border-radius:10px;padding:10px;font-size:14px}
+.pl input{accent-color:var(--ac);width:18px;height:18px}
+.note{font-size:13px;color:var(--mu)}
+</style>
+</head>
+<body>
+<main>
+ <section id="home" class="panel show">
+  <h1 id="name"></h1><div class="st" id="st"></div><div class="st" id="ea"></div>
+  <button class="dial" id="dial"><svg viewBox="0 0 200 200" id="ticks" aria-hidden="true"></svg>
+   <div class="tx"><b id="dl"></b><span id="dn"></span></div></button>
+  <div class="row"><button class="btn" id="pairsBtn">Pairs</button><button class="btn" id="rm">Remove bot</button></div>
+  <h2>Your bots</h2>
+  <div id="list"></div>
+  <div class="add"><input type="text" id="newName" placeholder="Name your bot" maxlength="24" aria-label="Bot name"><button class="btn pri" id="add">Add bot</button></div>
+  <h2>High-impact news</h2><div id="news" class="note">Connect on the MetaTrader tab to load news.</div>
+ </section>
+
+ <section id="chart" class="panel">
+  <h1>EA chart</h1><div class="st">Upload a chart screenshot to get a trade idea.</div>
+  <h2>Chart image</h2>
+  <input type="file" id="img" accept="image/*" aria-label="Chart image">
+  <input type="text" id="ctx" placeholder="Pair and timeframe, e.g. EURUSD M15" style="margin-top:10px;width:100%">
+  <button class="btn pri" id="go" style="width:100%;margin-top:10px">Get entry</button>
+  <div id="out" class="card" style="margin-top:14px;display:none"></div>
+  <p class="note">An AI reading of a screenshot is a second opinion, not a signal. Check it yourself and always use a stop loss.</p>
+ </section>
+
+ <section id="mt" class="panel">
+  <h1>MetaTrader</h1><div class="st" id="link"></div>
+  <h2>Access key</h2>
+  <div class="add"><input type="text" id="key" placeholder="Your API key" autocomplete="off" aria-label="API key"><button class="btn pri" id="saveKey">Connect</button></div>
+  <h2>EA inputs in MT5</h2>
+  <div class="note">BackendURL</div><code id="url"></code>
+  <div class="note">BotName (must match exactly)</div><code id="bn"></code>
+  <button class="btn" id="copy">Copy server address</button>
+  <p class="note">The EA reads Start/Stop and pairs from this page every few seconds and reports its equity back. It needs MT5 on a computer; mobile MT5 cannot run EAs.</p>
+ </section>
+</main>
+
+<nav role="tablist">
+ <button role="tab" data-t="home" aria-selected="true">Home</button>
+ <button role="tab" data-t="chart" aria-selected="false">EA chart</button>
+ <button role="tab" data-t="mt" aria-selected="false">MetaTrader</button>
+</nav>
+
+<dialog id="dlg">
+ <b>Pairs for <span id="dbot"></span></b>
+ <div class="note" id="dcount"></div>
+ <div class="pl" id="pl"></div>
+ <button class="btn pri" id="done" style="width:100%">Save pairs</button>
+</dialog>
+
+<script>
+const ALL=["EURUSD","GBPUSD","USDJPY","AUDUSD","USDCAD","USDCHF","NZDUSD","EURJPY","GBPJPY","EURGBP","XAUUSD","BTCUSD"];
+const $=s=>document.querySelector(s);
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function load(){try{return JSON.parse(localStorage.getItem("scalper"))}catch(e){return null}}
+function save(){try{localStorage.setItem("scalper",JSON.stringify(S))}catch(e){}sync()}
+let S=load()||{active:0,bots:[{name:"Zeta Scalper",pairs:["EURUSD","GBPUSD","XAUUSD"],run:false}]};
+let rmArmed=false;
+const bot=()=>S.bots[S.active];
+
+function render(){
+ const b=bot(),n=b?b.pairs.length:0;
+ $("#name").textContent=b?b.name:"No bot yet";
+ $("#st").textContent=b?(b.run?"Trading":"Stopped"):"Add a bot below to begin";
+ $("#st").className="st"+(b&&b.run?" on":"");
+ $("#dial").classList.toggle("run",!!(b&&b.run));
+ $("#dial").disabled=!b;
+ $("#dl").textContent=b&&b.run?"Stop trading":"Start trading";
+ $("#dn").textContent=n+" of 10 pairs";
+ let t="";
+ for(let i=0;i<10;i++){const a=i*36*Math.PI/180,x=Math.sin(a),y=-Math.cos(a);
+  t+=`<line class="t${i<n?" on":""}" x1="${100+84*x}" y1="${100+84*y}" x2="${100+95*x}" y2="${100+95*y}"/>`}
+ $("#ticks").innerHTML=t;
+ $("#pairsBtn").disabled=$("#rm").disabled=!b;
+ $("#rm").textContent=rmArmed?"Tap again to remove":"Remove bot";
+ $("#list").innerHTML=S.bots.map((x,i)=>`<button class="btn bot${i===S.active?" sel":""}" data-i="${i}"><b>${esc(x.name)}</b><span>${x.run?"Trading":"Stopped"}, ${x.pairs.length} pairs</span></button>`).join("");
+ $("#url").textContent=location.origin;$("#bn").textContent=b?b.name:"(add a bot first)";
+ save();
+}
+
+$("#dial").onclick=()=>{const b=bot();if(!b)return;
+ if(!b.pairs.length){openPairs();return}
+ b.run=!b.run;render()};
+$("#list").onclick=e=>{const el=e.target.closest(".bot");if(!el)return;S.active=+el.dataset.i;rmArmed=false;render()};
+$("#add").onclick=()=>{const v=$("#newName").value.trim()||"Scalper "+(S.bots.length+1);
+ S.bots.push({name:v,pairs:[],run:false});S.active=S.bots.length-1;$("#newName").value="";render();openPairs()};
+$("#rm").onclick=()=>{if(!rmArmed){rmArmed=true;render();setTimeout(()=>{rmArmed=false;render()},3000);return}
+ S.bots.splice(S.active,1);S.active=0;rmArmed=false;render()};
+
+function openPairs(){const b=bot();if(!b)return;$("#dbot").textContent=b.name;drawPairs();$("#dlg").showModal()}
+function drawPairs(){const b=bot(),full=b.pairs.length>=10;
+ $("#dcount").textContent=b.pairs.length+" of 10 selected";
+ $("#pl").innerHTML=ALL.map(p=>{const on=b.pairs.includes(p);
+  return `<label><input type="checkbox" value="${p}" ${on?"checked":""} ${!on&&full?"disabled":""}>${p}</label>`}).join("")}
+$("#pl").onchange=e=>{const b=bot(),p=e.target.value;
+ b.pairs=e.target.checked?[...b.pairs,p]:b.pairs.filter(x=>x!==p);
+ if(!b.pairs.length)b.run=false;drawPairs();render()};
+$("#pairsBtn").onclick=openPairs;
+$("#done").onclick=()=>$("#dlg").close();
+
+document.querySelectorAll("nav button").forEach(btn=>btn.onclick=()=>{
+ document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x===btn));
+ document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("show",p.id===btn.dataset.t))});
+
+$("#copy").onclick=async()=>{try{await navigator.clipboard.writeText(location.origin);$("#copy").textContent="Copied"}
+ catch(e){$("#copy").textContent="Select the text above to copy"}
+ setTimeout(()=>$("#copy").textContent="Copy server address",2000)};
+
+
+let KEY="";try{KEY=localStorage.getItem("key")||""}catch(e){}
+async function api(path,opt={}){
+ const r=await fetch(path,{...opt,headers:{"X-Key":KEY,...(opt.headers||{})}});
+ const j=await r.json().catch(()=>({}));
+ if(r.status===401)throw new Error("Wrong or missing key");
+ if(!r.ok)throw new Error(j.error||"Server error "+r.status);
+ return j}
+function setLink(ok,msg){$("#link").textContent=ok?"Connected to server":"Not connected: "+(msg||"enter your key")}
+let st;function sync(){if(!KEY)return;clearTimeout(st);
+ st=setTimeout(()=>api("/api/bots",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bots:S.bots})}).then(()=>setLink(true)).catch(e=>setLink(false,e.message)),400)}
+async function poll(){if(!KEY)return;
+ try{const d=await api("/api/bots"),b=bot(),r=b&&d.reports[b.name];
+  $("#ea").textContent=r?(r.age<30?"MT5 online, equity "+r.equity+", "+r.open+" open trades":"MT5 offline, last seen "+Math.max(1,Math.round(r.age/60))+" min ago"):"MT5 not connected yet";
+  setLink(true)}catch(e){setLink(false,e.message)}}
+async function news(){if(!KEY)return;
+ try{const d=await api("/api/news"),since=Date.now()-36e5,up=d.items.filter(x=>new Date(x.date)>since).slice(0,6);
+  $("#news").innerHTML=up.length?up.map(x=>`<div class="card" style="margin-bottom:8px"><b>${esc(x.country)}</b> ${esc(x.title)}<div class="note">${new Date(x.date).toLocaleString([],{weekday:"short",hour:"2-digit",minute:"2-digit"})}</div></div>`).join(""):"No high-impact events left this week."}
+ catch(e){$("#news").textContent="News unavailable: "+e.message}}
+function shrink(f){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{const k=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement("canvas");
+ c.width=im.width*k;c.height=im.height*k;c.getContext("2d").drawImage(im,0,0,c.width,c.height);c.toBlob(res,"image/jpeg",.85)};
+ im.onerror=()=>rej(new Error("Could not read that image"));im.src=URL.createObjectURL(f)})}
+$("#go").onclick=async()=>{const f=$("#img").files[0],o=$("#out");o.style.display="block";
+ if(!f){o.textContent="Choose a chart image first.";return}
+ if(!KEY){o.textContent="Connect on the MetaTrader tab first.";return}
+ o.textContent="Reading chart...";
+ try{const fd=new FormData();fd.append("image",await shrink(f),"chart.jpg");fd.append("note",$("#ctx").value);
+  const d=await api("/api/analyze",{method:"POST",body:fd}),v=x=>esc(String(x??"none"));
+  o.innerHTML=d.direction==="buy"||d.direction==="sell"
+   ?`<b>${v(d.direction).toUpperCase()}</b> (confidence ${v(d.confidence)})<br>Entry ${v(d.entry)}<br>Stop loss ${v(d.stop_loss)}<br>Take profit ${v(d.take_profit)}<p class="note">${v(d.reason)}</p>`
+   :`<b>No clear trade</b><p class="note">${v(d.reason)}</p>`}
+ catch(e){o.textContent=e.message}};
+$("#key").value=KEY;
+$("#saveKey").onclick=()=>{KEY=$("#key").value.trim();try{localStorage.setItem("key",KEY)}catch(e){}sync();poll();news()};
+setInterval(poll,5000);
+if(KEY){sync();poll();news()}else setLink(false);
+
+render();
+</script>
+</body>
+</html>
