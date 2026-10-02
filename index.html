@@ -3,51 +3,55 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
 <title>Chart Scanner</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#E9EEF2;--sf:#fff;--ink:#101820;--mu:#5B6773;--ln:#CBD5DD;--ac:#E8174B;--ok:#0E8F5B;
+:root{color-scheme:dark;--bg:#000;--sf:#0A0D14;--ink:#EAF1FF;--mu:#8B97B3;--ln:#1B2540;--ac:#1A6BFF;--ac2:#5AAEFF;--ok:#22E39B;--bad:#FF5470;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B0F14;--sf:#151B23;--ink:#EEF2F6;--mu:#9AA7B4;--ln:#28323D;--ac:#FF4D79;--ok:#3DD598}}
-:root[data-theme="dark"]{--bg:#0B0F14;--sf:#151B23;--ink:#EEF2F6;--mu:#9AA7B4;--ln:#28323D;--ac:#FF4D79;--ok:#3DD598}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:#000}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 Sora,system-ui,sans-serif}
 main{max-width:460px;margin:0 auto;padding:22px 20px 110px}
-h1{font-size:26px;line-height:1.15;margin:0;font-weight:700}
-h2{font-size:15px;margin:24px 0 10px;font-weight:600;color:var(--mu)}
+h1{font-size:26px;line-height:1.15;margin:0;font-weight:700;text-shadow:0 0 24px rgba(26,107,255,.55)}
+h2{font-size:15px;margin:24px 0 10px;font-weight:600;color:var(--ac2)}
 button{font:inherit;color:inherit;cursor:pointer}
-button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ac2);outline-offset:2px}
 .btn{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:13px 16px;font-weight:600}
-.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+.btn.pri{background:linear-gradient(180deg,#2F80FF,#1A5FE8);border-color:#3B8BFF;color:#fff;box-shadow:0 0 20px rgba(26,107,255,.4)}
 .btn:disabled{opacity:.55;cursor:default}
 .full{width:100%;margin-top:10px}
 input[type=text]{width:100%;font:inherit;color:var(--ink);background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:12px 14px}
-input[type=file]{width:100%;font:inherit;color:var(--ink);background:var(--sf);border:1px dashed var(--ln);border-radius:14px;padding:14px}
+input[type=file]{width:100%;font:inherit;color:var(--ink);background:var(--sf);border:1px dashed #2A3A66;border-radius:14px;padding:14px}
 .panel{display:none}.panel.show{display:block}
 .sub{color:var(--mu);font-size:14px;margin-top:4px}
 .card{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:16px}
 .note{font-size:13px;color:var(--mu)}
-.err{color:var(--ac);font-weight:600}
+.err{color:var(--bad);font-weight:600}
 #prev{display:none;max-width:100%;max-height:220px;border-radius:12px;margin-top:10px;border:1px solid var(--ln)}
-#out{display:none;margin-top:16px}
+#out{display:none;margin-top:16px;border-color:#24376B;box-shadow:0 0 24px rgba(26,107,255,.15)}
 .dir{font-size:30px;font-weight:700;line-height:1}
-.dir.buy{color:var(--ok)}.dir.sell{color:var(--ac)}
+.dir.buy{color:var(--ok)}.dir.sell{color:var(--bad)}
+.bias{display:inline-block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ac2);border:1px solid #24376B;border-radius:20px;padding:3px 10px;margin:6px 0 12px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
-.grid div{border:1px solid var(--ln);border-radius:10px;padding:10px}
+.grid div{border:1px solid var(--ln);border-radius:10px;padding:10px;background:#05070C}
 .grid small{display:block;color:var(--mu);font-size:12px}.grid b{font-size:17px}
-.warn{border-left:4px solid var(--ac);padding:8px 12px;margin:12px 0;font-size:14px;background:var(--bg);border-radius:6px}
+.kv{border-top:1px solid var(--ln);padding:10px 0}
+.kv small{display:block;color:var(--ac2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.kv span{font-size:14px}
+.warn{border-left:4px solid var(--bad);padding:8px 12px;margin:12px 0;font-size:14px;background:#0D0A10;border-radius:6px}
 .seg{display:flex;gap:8px;margin:14px 0 4px}
 .seg button{flex:1;background:var(--sf);border:1px solid var(--ln);border-radius:12px;padding:10px;font-weight:600;font-size:14px;color:var(--mu)}
 .seg button[aria-pressed=true]{border-color:var(--ac);color:var(--ink);box-shadow:inset 0 -3px 0 var(--ac)}
 .ev{margin-bottom:10px}
-.ev.soon{border-left:4px solid var(--ac)}
+.ev.soon{border-left:4px solid var(--ac2)}
 .ev .top{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--mu)}
-.ev b.c{color:var(--ink)}
+.ev b.c{color:var(--ac2)}
 .ev .t{margin:4px 0}
-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--sf);border-top:1px solid var(--ln);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:#05070C;border-top:1px solid var(--ln);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
 nav button{flex:1;background:none;border:0;padding:12px 4px;font-weight:600;color:var(--mu)}
-nav button[aria-selected=true]{color:var(--ac)}
+nav button[aria-selected=true]{color:var(--ac2);text-shadow:0 0 12px rgba(90,174,255,.7)}
 </style>
 </head>
 <body>
@@ -61,21 +65,21 @@ nav button[aria-selected=true]{color:var(--ac)}
  </div>
 
  <section id="scan" class="panel show">
-  <h1>Chart scanner</h1><div class="sub">Upload a chart screenshot to get entry, stop loss and take profit.</div>
+  <h1>Chart scanner</h1><div class="sub">ICT, SMC and AMD read of your chart, with entry, stop and targets.</div>
   <h2>Chart image</h2>
   <input type="file" id="img" accept="image/*" aria-label="Chart image">
   <img id="prev" alt="Chart preview">
-  <input type="text" id="note" placeholder="Optional: pair and timeframe, e.g. EURUSD M15" style="margin-top:10px" maxlength="60">
+  <input type="text" id="note" placeholder="Optional: pair and timeframe, e.g. XAUUSD M15" style="margin-top:10px" maxlength="60">
   <button class="btn pri full" id="go">Scan chart</button>
   <div class="card" id="out"></div>
-  <p class="note">An AI reading of a screenshot is a second opinion, not a signal. Check the levels yourself and always use a stop loss. Uploads go to Google's free Gemini service, which may use them to improve its models.</p>
+  <p class="note">An AI reading of a screenshot is a second opinion, not a signal. Real order flow (volume, delta, footprint) only counts if it is visible in your screenshot. Check the levels yourself and always use a stop loss. Uploads go to Google's free Gemini service, which may use them to improve its models.</p>
  </section>
 
  <section id="news" class="panel">
   <h1>News events</h1><div class="sub">Upcoming economic releases, in your local time.</div>
   <div class="seg"><button id="fHigh" aria-pressed="true">High impact</button><button id="fAll" aria-pressed="false">High and medium</button></div>
   <button class="btn full" id="refresh">Refresh</button>
-  <h2 id="nh">Upcoming</h2>
+  <h2>Upcoming</h2>
   <div id="nl" class="note">Loading...</div>
   <button class="btn full" id="forget" style="margin-top:24px">Forget access key on this phone</button>
  </section>
@@ -89,7 +93,7 @@ nav button[aria-selected=true]{color:var(--ac)}
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let KEY="",NEWS=[],level="High";
+let KEY="",NEWS=[],level="High",SRC="",WHY="";
 try{KEY=localStorage.getItem("key")||""}catch(e){}
 
 async function api(path,opt={}){
@@ -113,22 +117,24 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
 /* ---------- news ---------- */
 function span(ms){const m=Math.round(Math.abs(ms)/6e4),d=Math.floor(m/1440),h=Math.floor(m%1440/60);
  return d?`${d}d ${h}h`:h?`${h}h ${m%60}m`:`${m}m`}
+function rel(ms){return ms>=0?"in "+span(ms):span(ms)+" ago"}
 function drawNews(){
  const now=Date.now(),list=NEWS.filter(x=>new Date(x.date)>now-36e5&&(level==="all"||x.impact==="High")).slice(0,30);
  $("#nl").className="";
- $("#nl").innerHTML=list.length?list.map(x=>{
+ const banner=SRC==="ai"?`<div class="warn"><b>AI-compiled list.</b> The main calendar feed was unavailable (${esc(WHY||"blocked")}), so this was gathered from web search. Confirm times on a calendar before relying on it.</div>`:"";
+ $("#nl").innerHTML=banner+(list.length?list.map(x=>{
   const ms=new Date(x.date)-now,soon=Math.abs(ms)<=36e5;
   const when=new Date(x.date).toLocaleString([],{weekday:"short",hour:"2-digit",minute:"2-digit"});
   const extra=(x.forecast||x.previous)?`<div class="note">Forecast ${esc(x.forecast||"n/a")}, previous ${esc(x.previous||"n/a")}</div>`:"";
-  return `<div class="card ev${soon?" soon":""}"><div class="top"><span><b class="c">${esc(x.country)}</b>, ${esc(x.impact.toLowerCase())} impact</span><span>${ms>=0?"in "+span(ms):span(ms)+" ago"}</span></div><div class="t">${esc(x.title)}</div><div class="note">${esc(when)}</div>${extra}</div>`}).join("")
-  :`<div class="note">No matching events left this week.</div>`}
+  return `<div class="card ev${soon?" soon":""}"><div class="top"><span><b class="c">${esc(x.country)}</b>, ${esc(String(x.impact).toLowerCase())} impact</span><span>${rel(ms)}</span></div><div class="t">${esc(x.title)}</div><div class="note">${esc(when)}</div>${extra}</div>`}).join("")
+  :`<div class="note">No matching events left this week.</div>`)}
 async function loadNews(){
  if(!KEY)return;
- try{NEWS=(await api("/api/news")).items;drawNews();return}catch(e){}
- try{ /* server feed blocked: ask the feed directly from this phone */
-  const r=await fetch("https://nfs.faireconomy.media/ff_calendar_thisweek.json");
-  NEWS=(await r.json()).filter(e=>e.impact==="High"||e.impact==="Medium");drawNews()}
- catch(e){$("#nl").className="note err";$("#nl").textContent="The free news feed is limiting requests right now. Wait a few minutes and tap Refresh."}}
+ try{const d=await api("/api/news");NEWS=d.items;SRC=d.source;WHY=d.why;drawNews();return}catch(e){WHY=e.message}
+ for(const u of ["https://nfs.faireconomy.media/ff_calendar_thisweek.json","https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json"]){
+  try{const r=await fetch(u);if(!r.ok)continue;
+   NEWS=(await r.json()).filter(e=>e.impact==="High"||e.impact==="Medium");SRC="feed";drawNews();return}catch(e){}}
+ $("#nl").className="note err";$("#nl").textContent="No news source worked. "+WHY}
 function setLevel(l){level=l;$("#fHigh").setAttribute("aria-pressed",l==="High");$("#fAll").setAttribute("aria-pressed",l==="all");drawNews()}
 $("#fHigh").onclick=()=>setLevel("High");$("#fAll").onclick=()=>setLevel("all");
 $("#refresh").onclick=loadNews;
@@ -147,22 +153,30 @@ function newsWarning(pair){
  const p=String(pair||"").toUpperCase().replace(/[^A-Z]/g,"");if(p.length<6)return"";
  const cc=[p.slice(0,3),p.slice(3,6)],now=Date.now();
  const hit=NEWS.filter(x=>x.impact==="High"&&cc.includes(x.country)&&new Date(x.date)-now>-36e5&&new Date(x.date)-now<9e6);
- return hit.length?`<div class="warn"><b>News risk:</b> ${hit.map(x=>`${esc(x.country)} ${esc(x.title)} (${new Date(x.date)-now>=0?"in "+span(new Date(x.date)-now):span(new Date(x.date)-now)+" ago"})`).join("; ")}. Price can spike, so consider waiting.</div>`:""}
+ return hit.length?`<div class="warn"><b>News risk:</b> ${hit.map(x=>`${esc(x.country)} ${esc(x.title)} (${rel(new Date(x.date)-now)})`).join("; ")}. Price can spike, so consider waiting.</div>`:""}
 
 function result(d,note){
- const n=x=>{const v=Number(x);return Number.isFinite(v)&&x!==null&&x!==""?v:null};
- const dir=d.direction,e=n(d.entry),s=n(d.stop_loss),t=n(d.take_profit);
+ const num=x=>{const v=Number(x);return x!==null&&x!==undefined&&x!==""&&Number.isFinite(v)?v:null};
+ const lv=a=>Array.isArray(a)&&a.length?a.map(esc).join(", "):"";
+ const row=(k,v)=>v?`<div class="kv"><small>${k}</small><span>${v}</span></div>`:"";
+ const pd=d.premium_discount||{},amd=d.amd||{},li=d.liquidity||{};
+ const range=num(pd.range_low)!==null&&num(pd.range_high)!==null?` (range ${esc(pd.range_low)} to ${esc(pd.range_high)})`:"";
+ const arrays=(Array.isArray(d.pd_arrays)?d.pd_arrays:[]).slice(0,4).map(a=>`${esc(a.side)} ${esc(a.type)}, ${esc(a.low)} to ${esc(a.high)}`).join("<br>");
+ const ctx=row("Structure",esc(d.structure))
+  +row("AMD phase",amd.phase?`${esc(amd.phase)}. ${esc(amd.note||"")}`:"")
+  +row("Premium / discount",pd.zone?esc(pd.zone)+range:"")
+  +row("Liquidity",(lv(li.buy_side)?"Buy-side "+lv(li.buy_side)+"<br>":"")+(lv(li.sell_side)?"Sell-side "+lv(li.sell_side)+"<br>":"")+esc(li.swept||""))
+  +row("PD arrays",arrays)+row("Order flow",esc(d.orderflow));
  const pair=d.pair&&d.pair!=="null"?d.pair:note;
- const head=`<div class="note">${esc(d.pair||"Pair not read")}${d.timeframe?", "+esc(d.timeframe):""}</div>`;
- if(dir!=="buy"&&dir!=="sell"||e===null||s===null||t===null)
-  return head+`<div class="dir">No clear trade</div><p>${esc(d.reason)}</p>`+newsWarning(pair);
- const ok=dir==="buy"?(s<e&&e<t):(t<e&&e<s);
- const rr=Math.abs(t-e)/Math.abs(e-s);
- const lv=(a)=>Array.isArray(a)&&a.length?a.map(esc).join(", "):"n/a";
- return head+`<div class="dir ${dir}">${esc(dir.toUpperCase())}</div><div class="note">${esc(d.entry_type||"market")} entry, confidence ${esc(d.confidence)}</div>
- <div class="grid"><div><small>Entry</small><b>${e}</b></div><div><small>Stop loss</small><b>${s}</b></div><div><small>Take profit</small><b>${t}</b></div><div><small>Reward to risk</small><b>${Number.isFinite(rr)?rr.toFixed(2):"n/a"}</b></div></div>
+ const head=`<div class="note">${esc(d.pair||"Pair not read")}${d.timeframe?", "+esc(d.timeframe):""}</div><span class="bias">${esc(d.bias||"neutral")} bias</span>`;
+ const dir=d.direction,e=num(d.entry),s=num(d.stop_loss),t=num(d.take_profit),t2=num(d.take_profit_2);
+ if((dir!=="buy"&&dir!=="sell")||e===null||s===null||t===null)
+  return head+`<div class="dir">No clear trade</div><p>${esc(d.reason)}</p>`+ctx+newsWarning(pair);
+ const ok=dir==="buy"?(s<e&&e<t):(t<e&&e<s),rr=Math.abs(t-e)/Math.abs(e-s);
+ return head+`<div class="dir ${dir}">${esc(dir.toUpperCase())}</div><div class="note">${esc(d.entry_type||"limit")} entry, confidence ${esc(d.confidence)}</div>
+ <div class="grid"><div><small>Entry</small><b>${e}</b></div><div><small>Stop loss</small><b>${s}</b></div><div><small>Take profit</small><b>${t}</b></div><div><small>Reward to risk</small><b>${Number.isFinite(rr)?rr.toFixed(2):"n/a"}</b></div>${t2!==null?`<div><small>Take profit 2</small><b>${t2}</b></div>`:""}</div>
  ${ok?"":`<div class="warn"><b>Check these levels.</b> Stop loss and take profit are on the wrong sides of the entry for a ${esc(dir)}.</div>`}
- <div class="note">Support ${lv(d.support)}<br>Resistance ${lv(d.resistance)}</div><p>${esc(d.reason)}</p>`+newsWarning(pair)}
+ ${row("Entry basis",esc(d.entry_basis))}${row("Invalidation",esc(d.invalidation))}${ctx}<p>${esc(d.reason)}</p>`+newsWarning(pair)}
 
 $("#go").onclick=async()=>{
  const f=$("#img").files[0],o=$("#out"),b=$("#go");o.style.display="block";
