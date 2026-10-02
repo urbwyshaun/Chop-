@@ -1,25 +1,24 @@
 import base64, hmac, json, os, time
 
 import requests
-from flask import Flask, Response, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 
-KEY = os.environ.get("API_KEY", "")                      # your private access key
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")        # free key from Google AI Studio
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+KEY = os.environ.get("API_KEY", "")                  # your private access key
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")    # free key from Google AI Studio
+MODELS = [m for m in (os.environ.get("GEMINI_MODEL"), "gemini-2.5-flash", "gemini-2.5-flash-lite") if m]
 NEWS_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024
-BOTS, REPORTS, NEWS = [], {}, {"t": 0, "items": []}     # in memory: resets when the server restarts
+NEWS = {"t": 0, "items": []}
 
 
 @app.before_request
 def guard():
     if request.path == "/":
         return None
-    sent = request.headers.get("X-Key", "")
-    if not KEY or not hmac.compare_digest(sent, KEY):
-        return jsonify(error="unauthorized"), 401
+    if not KEY or not hmac.compare_digest(request.headers.get("X-Key", ""), KEY):
+        return jsonify(error="Wrong or missing key"), 401
 
 
 @app.get("/")
@@ -27,56 +26,16 @@ def home():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), "index.html")
 
 
-# ---- dashboard <-> server ------------------------------------------------
-@app.get("/api/bots")
-def get_bots():
-    now = time.time()
-    rep = {k: {**v, "age": int(now - v["seen"])} for k, v in REPORTS.items()}
-    return jsonify(bots=BOTS, reports=rep)
-
-
-@app.post("/api/bots")
-def set_bots():
-    global BOTS
-    data = request.get_json(silent=True) or {}
-    BOTS = [
-        {"name": str(b.get("name", ""))[:24],
-         "pairs": [str(p)[:12] for p in b.get("pairs", [])][:10],
-         "run": bool(b.get("run"))}
-        for b in data.get("bots", [])
-    ][:20]
-    return jsonify(ok=True)
-
-
-# ---- MT5 EA <-> server (plain text so MQL5 can parse it easily) ----------
-@app.get("/ea/config")
-def ea_config():
-    b = next((x for x in BOTS if x["name"] == request.args.get("bot", "")), None)
-    out = f"run={1 if b and b['run'] and b['pairs'] else 0}\n"
-    if b and b["pairs"]:
-        out += "pairs=" + ",".join(b["pairs"]) + "\n"
-    return Response(out, mimetype="text/plain")
-
-
-@app.post("/ea/report")
-def ea_report():
-    f = request.form
-    REPORTS[f.get("bot", "")[:24]] = {
-        "balance": f.get("balance"), "equity": f.get("equity"),
-        "open": f.get("open"), "seen": time.time()}
-    return jsonify(ok=True)
-
-
-# ---- news ------------------------------------------------------------------
 @app.get("/api/news")
 def news():
-    if time.time() - NEWS["t"] > 1800:
+    if time.time() - NEWS["t"] > 1800:          # refresh at most every 30 minutes
         try:
             r = requests.get(NEWS_URL, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
             r.raise_for_status()
             NEWS["items"] = [
-                {"title": e["title"], "country": e["country"], "date": e["date"]}
-                for e in r.json() if e.get("impact") == "High"]
+                {"title": e.get("title", ""), "country": e.get("country", ""), "date": e.get("date", ""),
+                 "impact": e.get("impact"), "forecast": e.get("forecast", ""), "previous": e.get("previous", "")}
+                for e in r.json() if e.get("impact") in ("High", "Medium")]
             NEWS["t"] = time.time()
         except Exception as ex:
             if not NEWS["items"]:
@@ -84,10 +43,14 @@ def news():
     return jsonify(items=NEWS["items"])
 
 
-# ---- chart image -> trade idea --------------------------------------------
-PROMPT = """You are a cautious forex/CFD technical analyst. Read this chart screenshot. {note}
-Reply with JSON only: {{"direction":"buy|sell|none","entry":number or null,"stop_loss":number or null,"take_profit":number or null,"confidence":"low|medium|high","reason":"two short sentences"}}
-Use only prices you can read from the chart's price axis. If the chart is unclear or there is no good setup, use direction "none"."""
+PROMPT = """You are a cautious technical analyst for forex, gold and crypto charts. Read this chart screenshot. {note}
+Identify the instrument and timeframe if shown, the trend, and the nearest support and resistance. Then give one trade idea.
+Reply with JSON only, using exactly these keys:
+{{"pair":"e.g. EURUSD or null","timeframe":"e.g. M15 or null","direction":"buy|sell|none","entry_type":"market|limit|stop",
+"entry":number or null,"stop_loss":number or null,"take_profit":number or null,
+"support":[up to 2 numbers],"resistance":[up to 2 numbers],"confidence":"low|medium|high","reason":"two short sentences"}}
+Read prices only from the chart's price axis and last-price label. A buy needs stop_loss < entry < take_profit; a sell needs the reverse.
+If the image is unclear or there is no good setup, use direction "none" and explain why in reason."""
 
 
 @app.post("/api/analyze")
@@ -97,18 +60,29 @@ def analyze():
     img = request.files.get("image")
     if not img:
         return jsonify(error="No image received"), 400
+    data = base64.b64encode(img.read()).decode()
     body = {
         "contents": [{"parts": [
             {"text": PROMPT.format(note=request.form.get("note", "")[:100])},
-            {"inline_data": {"mime_type": "image/jpeg",
-                             "data": base64.b64encode(img.read()).decode()}}]}],
+            {"inline_data": {"mime_type": "image/jpeg", "data": data}}]}],
         "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2}}
-    r = requests.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
-        headers={"x-goog-api-key": GEMINI_KEY}, json=body, timeout=60)
-    if r.status_code != 200:
-        return jsonify(error=f"Gemini error {r.status_code}: {r.text[:160]}"), 502
-    try:
-        return jsonify(json.loads(r.json()["candidates"][0]["content"]["parts"][0]["text"]))
-    except Exception:
-        return jsonify(error="Could not read the AI reply. Try again."), 502
+    err = "no model tried"
+    for model in MODELS:                         # fall back to the next model on errors
+        try:
+            r = requests.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                headers={"x-goog-api-key": GEMINI_KEY}, json=body, timeout=60)
+        except requests.RequestException as ex:
+            err = str(ex)[:120]
+            continue
+        if r.status_code == 200:
+            try:
+                out = json.loads(r.json()["candidates"][0]["content"]["parts"][0]["text"])
+                if isinstance(out, list):
+                    out = out[0]
+                return jsonify(out)
+            except Exception:
+                err = "Could not read the AI reply"
+                continue
+        err = f"Gemini {model} error {r.status_code}: {r.text[:140]}"
+    return jsonify(error=err), 502
