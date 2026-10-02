@@ -102,7 +102,7 @@ async function api(path,opt={}){
 function gate(){$("#gate").hidden=!!KEY}
 $("#saveKey").onclick=async()=>{
  KEY=$("#key").value.trim();$("#gateMsg").textContent="";
- try{await api("/api/news");try{localStorage.setItem("key",KEY)}catch(e){}gate();loadNews()}
+ try{await api("/api/ping");try{localStorage.setItem("key",KEY)}catch(e){}gate();loadNews()}
  catch(e){KEY="";$("#gateMsg").textContent=e.message}};
 $("#forget").onclick=()=>{try{localStorage.removeItem("key")}catch(e){}KEY="";gate()};
 
@@ -124,8 +124,11 @@ function drawNews(){
   :`<div class="note">No matching events left this week.</div>`}
 async function loadNews(){
  if(!KEY)return;
- try{NEWS=(await api("/api/news")).items;drawNews()}
- catch(e){$("#nl").className="note err";$("#nl").textContent=e.message}}
+ try{NEWS=(await api("/api/news")).items;drawNews();return}catch(e){}
+ try{ /* server feed blocked: ask the feed directly from this phone */
+  const r=await fetch("https://nfs.faireconomy.media/ff_calendar_thisweek.json");
+  NEWS=(await r.json()).filter(e=>e.impact==="High"||e.impact==="Medium");drawNews()}
+ catch(e){$("#nl").className="note err";$("#nl").textContent="The free news feed is limiting requests right now. Wait a few minutes and tap Refresh."}}
 function setLevel(l){level=l;$("#fHigh").setAttribute("aria-pressed",l==="High");$("#fAll").setAttribute("aria-pressed",l==="all");drawNews()}
 $("#fHigh").onclick=()=>setLevel("High");$("#fAll").onclick=()=>setLevel("all");
 $("#refresh").onclick=loadNews;
@@ -176,5 +179,5 @@ $("#go").onclick=async()=>{
 gate();loadNews();
 </script>
 </body>
-   </html>
-  
+ </html>
+ 
